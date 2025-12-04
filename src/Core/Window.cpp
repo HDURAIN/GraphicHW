@@ -4,6 +4,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+// ============================================================================
+// Impl struct definition
+// ============================================================================
 struct Window::Impl
 {
 	GLFWwindow* handle = nullptr;
@@ -12,6 +15,25 @@ struct Window::Impl
 	std::string title;
 };
 
+// ============================================================================
+// Framebuffer Resize Callback
+// ============================================================================
+void Window::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+	// Retrieve our Impl instance from GLFW user pointer
+	void* ptr = glfwGetWindowUserPointer(window);
+	if (!ptr)
+		return;
+
+	auto* impl = reinterpret_cast<Window::Impl*>(ptr);
+
+	impl->width = width;
+	impl->height = height;
+}
+
+// ============================================================================
+// Constructor
+// ============================================================================
 Window::Window(int width, int height, const std::string& title)
 {
 	m_Impl = new Impl();
@@ -19,7 +41,6 @@ Window::Window(int width, int height, const std::string& title)
 	m_Impl->height = height;
 	m_Impl->title = title;
 
-	// Init GLFW first time
 	if (!glfwInit())
 	{
 		Log::Error("Failed to initialize GLFW!");
@@ -35,7 +56,6 @@ Window::Window(int width, int height, const std::string& title)
 #endif
 
 	m_Impl->handle = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-
 	if (!m_Impl->handle)
 	{
 		Log::Error("Failed to create GLFW window!");
@@ -43,10 +63,12 @@ Window::Window(int width, int height, const std::string& title)
 		return;
 	}
 
-	// Make OpenGL context active
 	glfwMakeContextCurrent(m_Impl->handle);
 
-	// Load glad
+	// Register user pointer & framebuffer resize callback
+	glfwSetWindowUserPointer(m_Impl->handle, m_Impl);
+	glfwSetFramebufferSizeCallback(m_Impl->handle, Window::FramebufferResizeCallback);
+
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		Log::Error("Failed to initialize GLAD!");
@@ -56,6 +78,9 @@ Window::Window(int width, int height, const std::string& title)
 	Log::Info("Window created successfully: " + title);
 }
 
+// ============================================================================
+// Destructor
+// ============================================================================
 Window::~Window()
 {
 	if (m_Impl)
@@ -71,21 +96,33 @@ Window::~Window()
 	}
 }
 
+// ============================================================================
+// Poll events
+// ============================================================================
 void Window::PollEvents()
 {
 	glfwPollEvents();
 }
 
+// ============================================================================
+// Swap buffers
+// ============================================================================
 void Window::SwapBuffers()
 {
 	glfwSwapBuffers(m_Impl->handle);
 }
 
+// ============================================================================
+// Should close?
+// ============================================================================
 bool Window::ShouldClose() const
 {
 	return glfwWindowShouldClose(m_Impl->handle);
 }
 
+// ============================================================================
+// Dynamic window size getters (updated by callback)
+// ============================================================================
 int Window::GetWidth() const
 {
 	return m_Impl->width;
@@ -96,14 +133,17 @@ int Window::GetHeight() const
 	return m_Impl->height;
 }
 
+// ============================================================================
+// Native handle getter
+// ============================================================================
 void* Window::GetNativeHandle() const
 {
 	return m_Impl->handle;
 }
 
-//============================================================
-// NEW ¡ª Cursor Lock Support
-//============================================================
+// ============================================================================
+// Cursor lock feature
+// ============================================================================
 void Window::SetCursorLocked(bool locked)
 {
 	if (!m_Impl || !m_Impl->handle)

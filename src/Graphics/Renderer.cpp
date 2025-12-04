@@ -5,19 +5,15 @@
 
 Renderer::Renderer()
 {
-	// Load default Phong shader
 	m_DefaultShader = new Shader("shaders/triangle.vert", "shaders/triangle.frag");
 
-	// Enable depth testing (fix correct 3D layering)
 	glEnable(GL_DEPTH_TEST);
 
-	// No face culling (your requirement)
-	// glEnable(GL_CULL_FACE);
-	// glCullFace(GL_BACK);
-
-	// Initialize texture sampler binding
 	m_DefaultShader->Bind();
 	m_DefaultShader->SetInt("u_TextureSampler", 0);
+
+	m_ViewportWidth = 1280;
+	m_ViewportHeight = 720;
 }
 
 Renderer::~Renderer()
@@ -25,23 +21,33 @@ Renderer::~Renderer()
 	delete m_DefaultShader;
 }
 
-//---------------------------------------------------------
-// Camera uniform setup
-//---------------------------------------------------------
-void Renderer::SetupCamera(const Camera& camera, Shader& shader)
+// ------------------------------------------------------------
+// Viewport update
+// ------------------------------------------------------------
+void Renderer::SetViewportSize(int width, int height)
+{
+	if (width > 0 && height > 0)
+	{
+		m_ViewportWidth = width;
+		m_ViewportHeight = height;
+	}
+}
+
+// ------------------------------------------------------------
+// Camera setup (now using dynamic aspect ratio)
+// ------------------------------------------------------------
+void Renderer::SetupCamera(const Camera& camera, Shader& shader, float aspectRatio)
 {
 	glm::mat4 view = camera.GetViewMatrix();
-
-	// NOTE: Renderer needs aspect ratio ¡ª using fixed 16:9 for now
-	glm::mat4 projection = camera.GetProjectionMatrix(16.0f / 9.0f);
+	glm::mat4 projection = camera.GetProjectionMatrix(aspectRatio);
 
 	shader.SetMat4("u_View", view);
 	shader.SetMat4("u_Projection", projection);
 }
 
-//---------------------------------------------------------
-// Light uniform setup
-//---------------------------------------------------------
+// ------------------------------------------------------------
+// Light uniform setup (NO direction upload!)
+// ------------------------------------------------------------
 void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 {
 	int dirCount = 0;
@@ -55,7 +61,6 @@ void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 		{
 			shader.SetVec3("u_DirectionalLight.color", light.GetColor());
 			shader.SetFloat("u_DirectionalLight.intensity", light.GetIntensity());
-
 			dirCount++;
 		}
 		else if (light.GetType() == LightType::Point)
@@ -72,46 +77,40 @@ void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 	shader.SetInt("u_HasDirectionalLight", dirCount > 0 ? 1 : 0);
 }
 
-//---------------------------------------------------------
-// Render single entity
-//---------------------------------------------------------
+// ------------------------------------------------------------
+// Draw entity
+// ------------------------------------------------------------
 void Renderer::DrawEntity(const Entity& entity, Shader& shader)
 {
-	// Upload material properties
 	entity.GetMaterial()->Apply(shader);
 
-	// Upload model matrix
 	glm::mat4 model = entity.GetTransform().GetMatrix();
 	shader.SetMat4("u_Model", model);
 
-	// Draw mesh
 	entity.GetMesh()->Bind();
 	entity.GetMesh()->Draw();
 }
 
-//---------------------------------------------------------
-// Main render entry
-//---------------------------------------------------------
+// ------------------------------------------------------------
+// Render scene (viewport-aware)
+// ------------------------------------------------------------
 void Renderer::Render(const Scene& scene)
 {
-	// Clear buffer every frame (fix ghosting)
+	glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
+
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	Shader& shader = *m_DefaultShader;
 	shader.Bind();
 
-	// Setup camera
-	SetupCamera(scene.GetCamera(), shader);
+	float aspect = (float)m_ViewportWidth / (float)m_ViewportHeight;
+	SetupCamera(scene.GetCamera(), shader, aspect);
 
-	// Upload light data
 	SetupLights(scene.GetLights(), shader);
 
-	// Render entities
 	for (const auto& entity : scene.GetEntities())
-	{
 		DrawEntity(entity, shader);
-	}
 
 	shader.Unbind();
 }

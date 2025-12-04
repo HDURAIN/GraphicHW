@@ -5,14 +5,13 @@
 #include "Graphics/Light.h"
 #include <GLFW/glfw3.h>
 
-
 //---------------------------------------------------------
 // Constructor ¡ª camera controller now initialized here
 //---------------------------------------------------------
 Application::Application()
 	: m_Window(1280, 720, "GraphicHW")
 	, m_UI(&m_Window)
-	, m_CamController(&m_Scene.GetCamera(), &m_Window)  // NEW
+	, m_CamController(&m_Scene.GetCamera(), &m_Window)
 {
 	Init();
 }
@@ -55,7 +54,6 @@ void Application::Init()
 	}
 }
 
-
 //---------------------------------------------------------
 // Shutdown
 //---------------------------------------------------------
@@ -75,26 +73,33 @@ void Application::Run()
 		m_Timer.Update();
 		float dt = m_Timer.GetDeltaTime();
 
-		// 2) Polling input & system
+		// 2) Poll input and system events
 		m_Window.PollEvents();
 
 		// ESC to exit application
 		if (Input::IsKeyPressed(GLFW_KEY_ESCAPE))
 		{
 			m_Running = false;
-			continue;   // Skip rest of frame, exit loop next iteration
+			continue;
 		}
 
 		// 3) UI begin frame
 		m_UI.BeginFrame();
 
-		// 4) UI modify scene
+		// 4) Modify scene via UI
 		m_UI.Render(m_Scene);
 
-		// 5) Update camera controller (FPS control)
+		// 5) FPS Camera update
 		m_CamController.Update(dt);
 
-		// 6) world rendering
+		// ============================
+		// NEW: Dynamic viewport update
+		// ============================
+		int winWidth = m_Window.GetWidth();
+		int winHeight = m_Window.GetHeight();
+		m_Renderer.SetViewportSize(winWidth, winHeight);
+
+		// 6) World rendering
 		m_Renderer.Render(m_Scene);
 
 		// 7) UI end frame
@@ -104,4 +109,3 @@ void Application::Run()
 		m_Window.SwapBuffers();
 	}
 }
-
