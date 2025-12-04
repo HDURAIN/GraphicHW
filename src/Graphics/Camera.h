@@ -11,15 +11,15 @@ public:
 	glm::mat4 GetViewMatrix() const;
 	glm::mat4 GetProjectionMatrix(float aspectRatio) const;
 
-	// Position setters/getters
+	// Position
 	void SetPosition(const glm::vec3& pos);
 	const glm::vec3& GetPosition() const;
 
-	// Orientation setters/getters (Euler angles in degrees)
+	// Orientation (Euler degrees)
 	void SetRotation(const glm::vec3& rotEulerDeg);
 	const glm::vec3& GetRotation() const;
 
-	// Projection parameter control
+	// Projection
 	void SetFOV(float fovY);
 	float GetFOV() const;
 
@@ -28,11 +28,11 @@ public:
 	float GetFarClip() const;
 
 private:
-	// Stored values
-	glm::vec3 m_Position;
-	glm::vec3 m_Rotation;      // Euler angles, pitch/yaw/roll (degrees)
+	// Default values ensure scene visibility on startup
+	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 5.0f);   // Default camera position
+	glm::vec3 m_Rotation = glm::vec3(0.0f, -90.0f, 0.0f); // Facing -Z
 
-	float m_FOV;
-	float m_NearClip;
-	float m_FarClip;
+	float m_FOV = 45.0f;
+	float m_NearClip = 0.1f;
+	float m_FarClip = 100.0f;
 };

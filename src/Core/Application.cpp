@@ -27,8 +27,6 @@ void Application::Init()
 {
 	Log::Info("Initializing Application...");
 
-	// Setup scene defaults
-
 	// 1) Lights
 	Light dirLight(LightType::Directional);
 	dirLight.SetColor({ 1.0f, 1.0f, 1.0f });
@@ -41,18 +39,20 @@ void Application::Init()
 	pointLight.SetIntensity(2.0f);
 	m_Scene.AddLight(pointLight);
 
-	// 2) Entities ¡ª create cube mesh and shared material
+	// 2) Mesh + material
 	Mesh* cubeMesh = Mesh::CreateCube();
 	Material* cubeMat = new Material();
 	cubeMat->SetDiffuseColor({ 0.6f, 0.6f, 0.8f });
 
-	// create some test cube instances
+	// 3) Sample entities ¡ª positioned in camera view
+	const float spacing = 2.0f;
 	for (int i = 0; i < 3; i++)
 	{
 		Entity& e = m_Scene.CreateEntity(cubeMesh, cubeMat);
-		e.GetTransform().SetPosition({ i * 1.5f, 0.0f, 0.0f });
+		e.GetTransform().SetPosition({ (i - 1) * spacing, 0.0f, 0.0f });
 	}
 }
+
 
 //---------------------------------------------------------
 // Shutdown

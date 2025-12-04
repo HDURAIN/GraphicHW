@@ -1,16 +1,16 @@
 #include "Scene.h"
 
 Scene::Scene()
-	: m_Camera()   // camera default ctor ok
+	: m_Camera()
 {
 }
 
 //---------------------------------------------------------
-// Entity creation ¡ª returns reference for transform editing
+// Entity creation ¡ª clone material to ensure independence
 //---------------------------------------------------------
 Entity& Scene::CreateEntity(Mesh* mesh, Material* material)
 {
-	m_Entities.emplace_back(mesh, material);
+	m_Entities.emplace_back(mesh, material->Clone());
 	return m_Entities.back();
 }
 

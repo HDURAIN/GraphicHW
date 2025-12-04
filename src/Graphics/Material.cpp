@@ -54,6 +54,12 @@ Texture* Material::GetNormalMap() const
 	return m_NormalMap;
 }
 
+// Clone material instance
+Material* Material::Clone() const
+{
+	return new Material(*this);
+}
+
 // Apply material parameters and bind textures
 void Material::Apply(Shader& shader) const
 {

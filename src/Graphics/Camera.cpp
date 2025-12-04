@@ -3,8 +3,8 @@
 #include <glm/gtc/constants.hpp>
 
 Camera::Camera()
-	: m_Position(0.0f, 0.0f, 3.0f),  // 默认在 +Z 看向原点
-	m_Rotation(0.0f),             // pitch,yaw,roll = 0
+	: m_Position(0.0f, 0.0f, 5.0f),       // Default position
+	m_Rotation(0.0f, -90.0f, 0.0f),    // Face toward -Z
 	m_FOV(45.0f),
 	m_NearClip(0.1f),
 	m_FarClip(100.0f)
@@ -16,19 +16,16 @@ Camera::Camera()
 //---------------------------------------------------------
 glm::mat4 Camera::GetViewMatrix() const
 {
-	// 从 Euler 角计算方向
 	float pitch = glm::radians(m_Rotation.x);
 	float yaw = glm::radians(m_Rotation.y);
 	float roll = glm::radians(m_Rotation.z);
 
-	// 前向向量（忽略 roll 简化，课程作业常用）
 	glm::vec3 front;
 	front.x = cos(yaw) * cos(pitch);
 	front.y = sin(pitch);
 	front.z = sin(yaw) * cos(pitch);
 	front = glm::normalize(front);
 
-	// 右和上向量（忽略 roll）
 	glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
 	glm::vec3 right = glm::normalize(glm::cross(front, worldUp));
 	glm::vec3 up = glm::normalize(glm::cross(right, front));

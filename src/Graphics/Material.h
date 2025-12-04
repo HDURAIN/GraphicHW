@@ -29,7 +29,10 @@ public:
 	void SetNormalMap(Texture* texture);
 	Texture* GetNormalMap() const;
 
-	// Upload material parameters to shader
+	// Clone material instance
+	Material* Clone() const;
+
+	// Upload parameters to shader
 	void Apply(Shader& shader) const;
 
 private:
