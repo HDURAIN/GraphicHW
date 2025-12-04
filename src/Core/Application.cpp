@@ -3,6 +3,8 @@
 #include "Graphics/Mesh.h"
 #include "Graphics/Material.h"
 #include "Graphics/Light.h"
+#include <GLFW/glfw3.h>
+
 
 //---------------------------------------------------------
 // Constructor ¡ª camera controller now initialized here
@@ -71,27 +73,35 @@ void Application::Run()
 	{
 		// 1) Time update
 		m_Timer.Update();
-		float dt = m_Timer.GetDeltaTime();     // NEW
+		float dt = m_Timer.GetDeltaTime();
 
 		// 2) Polling input & system
 		m_Window.PollEvents();
 
-		// 3) UI begin frame (ImGui prepare)
+		// ESC to exit application
+		if (Input::IsKeyPressed(GLFW_KEY_ESCAPE))
+		{
+			m_Running = false;
+			continue;   // Skip rest of frame, exit loop next iteration
+		}
+
+		// 3) UI begin frame
 		m_UI.BeginFrame();
 
 		// 4) UI modify scene
 		m_UI.Render(m_Scene);
 
 		// 5) Update camera controller (FPS control)
-		m_CamController.Update(dt);            // NEW
+		m_CamController.Update(dt);
 
 		// 6) world rendering
 		m_Renderer.Render(m_Scene);
 
-		// 7) UI end frame (draw gui to screen)
+		// 7) UI end frame
 		m_UI.EndFrame();
 
-		// 8) Swap
+		// 8) Swap buffers
 		m_Window.SwapBuffers();
 	}
 }
+
