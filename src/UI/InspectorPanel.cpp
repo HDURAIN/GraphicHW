@@ -1,5 +1,8 @@
 #include "InspectorPanel.h"
 #include "imgui.h"
+#include "Graphics/Texture.h"
+#include "Graphics/TextureLibrary.h"
+#include "Utils/FileSystem.h"
 
 //==============================================================
 // static storage
@@ -14,9 +17,6 @@ bool InspectorPanel::IsFPSModeRequested()
 	return s_FPSRequested;
 }
 
-//==============================================================
-// NEW ¡ª setter implementation so controller can update UI
-//==============================================================
 void InspectorPanel::SetFPSModeRequested(bool enable)
 {
 	s_FPSRequested = enable;
@@ -29,7 +29,6 @@ void InspectorPanel::Draw(Scene& scene)
 {
 	if (ImGui::Begin("Inspector"))
 	{
-		// FPS mode toggle ¡ª bound directly to static state
 		ImGui::Checkbox("Enable FPS Camera Mode", &s_FPSRequested);
 		ImGui::Separator();
 
@@ -54,20 +53,16 @@ void InspectorPanel::DrawCameraProperties(Camera& camera)
 		glm::vec3 pos = camera.GetPosition();
 		glm::vec3 rot = camera.GetRotation();
 
-		// position
 		if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
 			camera.SetPosition(pos);
 
-		// rotation
 		if (ImGui::DragFloat3("Rotation", &rot.x, 0.1f))
 			camera.SetRotation(rot);
 
-		// FOV
 		float fov = camera.GetFOV();
 		if (ImGui::SliderFloat("FOV", &fov, 1.0f, 120.0f))
 			camera.SetFOV(fov);
 
-		// clipping planes
 		float nearClip = camera.GetNearClip();
 		float farClip = camera.GetFarClip();
 
@@ -82,7 +77,7 @@ void InspectorPanel::DrawCameraProperties(Camera& camera)
 }
 
 //--------------------------------------------------------------
-// Light inspector
+// Lights
 //--------------------------------------------------------------
 void InspectorPanel::DrawLightProperties(std::vector<Light>& lights)
 {
@@ -91,8 +86,8 @@ void InspectorPanel::DrawLightProperties(std::vector<Light>& lights)
 		for (size_t i = 0; i < lights.size(); i++)
 		{
 			Light& light = lights[i];
-
 			std::string label = "Light " + std::to_string(i);
+
 			if (ImGui::TreeNode(label.c_str()))
 			{
 				glm::vec3 color = light.GetColor();
@@ -113,12 +108,13 @@ void InspectorPanel::DrawLightProperties(std::vector<Light>& lights)
 				ImGui::TreePop();
 			}
 		}
+
 		ImGui::TreePop();
 	}
 }
 
 //--------------------------------------------------------------
-// Entity + Transform + Material
+// Entity + Material + Texture Maps
 //--------------------------------------------------------------
 void InspectorPanel::DrawEntityProperties(std::vector<Entity>& entities)
 {
@@ -148,7 +144,7 @@ void InspectorPanel::DrawEntityProperties(std::vector<Entity>& entities)
 					e.GetTransform().SetScale(scl);
 
 				//------------------------------------------------------
-				// Material properties
+				// Material
 				//------------------------------------------------------
 				Material* mat = e.GetMaterial();
 				glm::vec3 diffuse = mat->GetDiffuseColor();
@@ -163,6 +159,106 @@ void InspectorPanel::DrawEntityProperties(std::vector<Entity>& entities)
 
 				if (ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f))
 					mat->SetShininess(shininess);
+
+				//------------------------------------------------------
+				// Texture Maps
+				//------------------------------------------------------
+				if (ImGui::TreeNode("Texture Maps"))
+				{
+					// Load available textures
+					std::vector<std::string> fileList =
+						FileSystem::ListFiles("assets/textures");
+
+					bool hasTextures = !fileList.empty();
+
+					// Add "<None>"
+					fileList.insert(fileList.begin(), "<None>");
+
+					// char* list
+					std::vector<const char*> names;
+					names.reserve(fileList.size());
+					for (auto& s : fileList)
+						names.push_back(s.c_str());
+
+					if (!hasTextures)
+					{
+						ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1),
+							"No .jpg textures found in /assets/textures/");
+					}
+
+					//--------------------------------------------------
+					// Helper: extract filename from full path
+					//--------------------------------------------------
+					auto ExtractFileName = [&](const std::string& path) -> std::string
+						{
+							size_t pos = path.find_last_of("/\\");
+							if (pos == std::string::npos)
+								return path;
+							return path.substr(pos + 1);
+						};
+
+					//--------------------------------------------------
+					// Get index from material's Texture*
+					//--------------------------------------------------
+					auto GetIndex = [&](Texture* tex) -> int
+						{
+							if (!tex) return 0;
+							std::string name = ExtractFileName(tex->GetPath());
+
+							for (int j = 1; j < fileList.size(); j++)
+								if (fileList[j] == name)
+									return j;
+
+							return 0;
+						};
+
+					//--------------------------------------------------
+					// Generic Drop-down function
+					//--------------------------------------------------
+					auto DrawSelector = [&](const char* label,
+						Texture* current,
+						std::function<void(Texture*)> setter)
+						{
+							int idx = GetIndex(current);
+
+							if (ImGui::Combo(label, &idx, names.data(), names.size()))
+							{
+								if (idx == 0)
+									setter(nullptr);
+								else
+								{
+									std::string fullPath =
+										"./assets/textures/" + fileList[idx];
+									setter(TextureLibrary::GetOrLoad(fullPath));
+								}
+							}
+						};
+
+					//--------------------------------------------------
+					// Final UI fields
+					//--------------------------------------------------
+					DrawSelector("Albedo Map",
+						mat->GetDiffuseTexture(),
+						[&](Texture* t) { mat->SetDiffuseTexture(t); });
+
+					DrawSelector("Normal Map",
+						mat->GetNormalMap(),
+						[&](Texture* t) { mat->SetNormalMap(t); });
+
+					DrawSelector("Roughness Map",
+						mat->GetRoughnessMap(),
+						[&](Texture* t) { mat->SetRoughnessMap(t); });
+
+					DrawSelector("Metalness Map",
+						mat->GetMetalnessMap(),
+						[&](Texture* t) { mat->SetMetalnessMap(t); });
+
+					DrawSelector("Displacement Map",
+						mat->GetDisplacementMap(),
+						[&](Texture* t) { mat->SetDisplacementMap(t); });
+
+					ImGui::TreePop();
+				}
 
 				ImGui::TreePop();
 			}

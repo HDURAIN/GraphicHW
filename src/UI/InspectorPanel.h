@@ -1,5 +1,9 @@
 #pragma once
+
 #include "Scene/Scene.h"
+#include "Graphics/Texture.h"
+#include "Graphics/TextureLibrary.h"
+#include "Utils/FileSystem.h"
 
 class InspectorPanel
 {
@@ -11,7 +15,7 @@ public:
 	// Query current FPS request (used by CameraController)
 	static bool IsFPSModeRequested();
 
-	// NEW ¡ª allow external systems (CameraController) to update UI state
+	// Allow external systems (CameraController) to update UI state
 	static void SetFPSModeRequested(bool enable);
 
 private:

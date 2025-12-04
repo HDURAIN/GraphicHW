@@ -5,12 +5,15 @@
 
 Renderer::Renderer()
 {
-	m_DefaultShader = new Shader("shaders/triangle.vert", "shaders/triangle.frag");
+	// Use PBR shader as the default shader
+	m_DefaultShader = new Shader("assets/shaders/pbr.vert", "assets/shaders/pbr.frag");
 
 	glEnable(GL_DEPTH_TEST);
 
 	m_DefaultShader->Bind();
-	m_DefaultShader->SetInt("u_TextureSampler", 0);
+	// Note: all texture samplers (u_AlbedoMap, u_NormalMap, etc.)
+	// are now configured per-frame in Material::Apply().
+	m_DefaultShader->Unbind();
 
 	m_ViewportWidth = 1280;
 	m_ViewportHeight = 720;
@@ -34,7 +37,7 @@ void Renderer::SetViewportSize(int width, int height)
 }
 
 // ------------------------------------------------------------
-// Camera setup (now using dynamic aspect ratio)
+// Camera setup (now using dynamic aspect ratio + view position)
 // ------------------------------------------------------------
 void Renderer::SetupCamera(const Camera& camera, Shader& shader, float aspectRatio)
 {
@@ -43,6 +46,9 @@ void Renderer::SetupCamera(const Camera& camera, Shader& shader, float aspectRat
 
 	shader.SetMat4("u_View", view);
 	shader.SetMat4("u_Projection", projection);
+
+	// PBR shader requires the camera/world-space view position
+	shader.SetVec3("u_ViewPos", camera.GetPosition());
 }
 
 // ------------------------------------------------------------
@@ -82,6 +88,7 @@ void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 // ------------------------------------------------------------
 void Renderer::DrawEntity(const Entity& entity, Shader& shader)
 {
+	// Material handles binding of all textures & PBR uniforms
 	entity.GetMaterial()->Apply(shader);
 
 	glm::mat4 model = entity.GetTransform().GetMatrix();
@@ -106,7 +113,6 @@ void Renderer::Render(const Scene& scene)
 
 	float aspect = (float)m_ViewportWidth / (float)m_ViewportHeight;
 	SetupCamera(scene.GetCamera(), shader, aspect);
-
 	SetupLights(scene.GetLights(), shader);
 
 	for (const auto& entity : scene.GetEntities())

@@ -95,17 +95,27 @@ target_link_libraries(GraphicHW PRIVATE
 
 # =========================================
 # Asset Copy (shaders / textures / fonts)
+# Corrected for TASK 8
+#
+# Copy to:
+#   <build>/assets/<subfolder>
+# matching runtime expectation: "./assets/textures"
 # =========================================
+
+set(ASSETS_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+set(ASSETS_DST_DIR "${CMAKE_CURRENT_BINARY_DIR}/assets")
+
 add_custom_target(copy_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ASSETS_DST_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders
-            ${CMAKE_CURRENT_BINARY_DIR}/shaders
+            ${ASSETS_SRC_DIR}/shaders
+            ${ASSETS_DST_DIR}/shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures
-            ${CMAKE_CURRENT_BINARY_DIR}/textures
+            ${ASSETS_SRC_DIR}/textures
+            ${ASSETS_DST_DIR}/textures
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts
-            ${CMAKE_CURRENT_BINARY_DIR}/fonts
+            ${ASSETS_SRC_DIR}/fonts
+            ${ASSETS_DST_DIR}/fonts
 )
 
 add_dependencies(GraphicHW copy_assets)
