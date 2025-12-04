@@ -9,21 +9,27 @@ class Material
 public:
 	Material();
 
-	// 颜色参数
+	// Diffuse color
 	void SetDiffuseColor(const glm::vec3& color);
 	const glm::vec3& GetDiffuseColor() const;
 
+	// Specular color
 	void SetSpecularColor(const glm::vec3& color);
 	const glm::vec3& GetSpecularColor() const;
 
+	// Shading hardness
 	void SetShininess(float shininess);
 	float GetShininess() const;
 
-	// 纹理（可选绑定）
+	// Diffuse texture
 	void SetDiffuseTexture(Texture* texture);
 	Texture* GetDiffuseTexture() const;
 
-	// 上传 uniform 给 shader
+	// Normal map texture
+	void SetNormalMap(Texture* texture);
+	Texture* GetNormalMap() const;
+
+	// Upload material parameters to shader
 	void Apply(Shader& shader) const;
 
 private:
@@ -32,4 +38,5 @@ private:
 	float     m_Shininess = 32.0f;
 
 	Texture* m_DiffuseTexture = nullptr;
+	Texture* m_NormalMap = nullptr;
 };

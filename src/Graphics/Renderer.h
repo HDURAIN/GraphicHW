@@ -9,15 +9,19 @@ public:
 	Renderer();
 	~Renderer();
 
-	// 渲染入口
+	// Render scene
 	void Render(const Scene& scene);
 
 private:
-	// 渲染流程拆解辅助函数（内部用）
+	// Camera parameters
 	void SetupCamera(const Camera& camera, Shader& shader);
+
+	// Light parameters
 	void SetupLights(const std::vector<Light>& lights, Shader& shader);
+
+	// Draw a single entity
 	void DrawEntity(const Entity& entity, Shader& shader);
 
 private:
-	Shader* m_DefaultShader; // 可支持一个基本Phong shader
+	Shader* m_DefaultShader; // Default Phong or normal-mapped shader
 };

@@ -44,9 +44,17 @@ Texture* Material::GetDiffuseTexture() const
 	return m_DiffuseTexture;
 }
 
-//---------------------------------------------------------
-// Apply() — upload uniforms and bind textures
-//---------------------------------------------------------
+void Material::SetNormalMap(Texture* texture)
+{
+	m_NormalMap = texture;
+}
+
+Texture* Material::GetNormalMap() const
+{
+	return m_NormalMap;
+}
+
+// Apply material parameters and bind textures
 void Material::Apply(Shader& shader) const
 {
 	shader.Bind();
@@ -55,6 +63,7 @@ void Material::Apply(Shader& shader) const
 	shader.SetVec3("u_Material.specularColor", m_SpecularColor);
 	shader.SetFloat("u_Material.shininess", m_Shininess);
 
+	// Diffuse texture (slot 0)
 	if (m_DiffuseTexture)
 	{
 		m_DiffuseTexture->Bind(0);
@@ -62,7 +71,18 @@ void Material::Apply(Shader& shader) const
 	}
 	else
 	{
-		// 无纹理时禁用 sampling
 		shader.SetInt("u_Material.diffuseTexture", -1);
+	}
+
+	// Normal map (slot 1)
+	if (m_NormalMap)
+	{
+		m_NormalMap->Bind(1);
+		shader.SetInt("u_NormalMap", 1);
+		shader.SetInt("u_NormalMapEnabled", 1);
+	}
+	else
+	{
+		shader.SetInt("u_NormalMapEnabled", 0);
 	}
 }

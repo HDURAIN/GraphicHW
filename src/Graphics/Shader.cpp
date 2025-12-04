@@ -20,7 +20,6 @@ static unsigned int CompileShader(unsigned int type, const std::string& source)
 		glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
 		Log::Error(std::string("Shader Compilation Failed: ") + infoLog);
 	}
-
 	return shader;
 }
 
@@ -48,8 +47,6 @@ Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
 
 	glDeleteShader(vs);
 	glDeleteShader(fs);
-
-	Log::Info("Shader created: " + vertexPath);
 }
 
 Shader::~Shader()
@@ -71,7 +68,7 @@ int Shader::GetUniformLocation(const std::string& name) const
 {
 	int location = glGetUniformLocation(m_RendererID, name.c_str());
 	if (location == -1)
-		Log::Warn("Uniform '" + name + "' does not exist or is unused.");
+		Log::Warn("Uniform '" + name + "' not found or unused.");
 	return location;
 }
 

@@ -1,60 +1,40 @@
 #include "Mesh.h"
 #include <glad/glad.h>
 
-//--------------------------------------------------------
-// 构造：上传 vertices + indices 到 GPU
-//--------------------------------------------------------
+// Construct from ready vertex buffer
+Mesh::Mesh(const std::vector<Vertex>& vertices,
+	const std::vector<unsigned int>& indices)
+	: m_Vertices(vertices), m_Indices(indices)
+{
+	m_IndexCount = static_cast<unsigned int>(indices.size());
+	RecalculateTangents();
+	UploadToGPU();
+}
+
+// Legacy constructor (positions + normals + uvs)
 Mesh::Mesh(const std::vector<glm::vec3>& positions,
 	const std::vector<glm::vec3>& normals,
 	const std::vector<glm::vec2>& uvs,
 	const std::vector<unsigned int>& indices)
 {
+	m_Vertices.reserve(positions.size());
+	for (size_t i = 0; i < positions.size(); i++)
+	{
+		Vertex v;
+		v.Position = positions[i];
+		v.Normal = normals[i];
+		v.UV = uvs[i];
+		v.Tangent = glm::vec3(0.0f);
+		m_Vertices.push_back(v);
+	}
+
+	m_Indices = indices;
 	m_IndexCount = static_cast<unsigned int>(indices.size());
 
-	struct Vertex
-	{
-		glm::vec3 pos;
-		glm::vec3 normal;
-		glm::vec2 uv;
-	};
-
-	std::vector<Vertex> vertices;
-	vertices.reserve(positions.size());
-
-	for (size_t i = 0; i < positions.size(); i++)
-		vertices.push_back({ positions[i], normals[i], uvs[i] });
-
-	// GPU 资源创建
-	glGenVertexArrays(1, &m_VAO);
-	glGenBuffers(1, &m_VBO);
-	glGenBuffers(1, &m_EBO);
-
-	glBindVertexArray(m_VAO);
-
-	// vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
-
-	// index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-	// layout
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, pos));
-
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, normal));
-
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, uv));
-
-	glBindVertexArray(0);
+	RecalculateTangents();
+	UploadToGPU();
 }
 
-//--------------------------------------------------------
-// 析构
-//--------------------------------------------------------
 Mesh::~Mesh()
 {
 	glDeleteBuffers(1, &m_EBO);
@@ -62,50 +42,120 @@ Mesh::~Mesh()
 	glDeleteVertexArrays(1, &m_VAO);
 }
 
-//--------------------------------------------------------
-// 绑定/绘制
-//--------------------------------------------------------
-void Mesh::Bind() const { glBindVertexArray(m_VAO); }
+void Mesh::Bind() const
+{
+	glBindVertexArray(m_VAO);
+}
 
 void Mesh::Draw() const
 {
 	glDrawElements(GL_TRIANGLES, m_IndexCount, GL_UNSIGNED_INT, nullptr);
 }
 
-//--------------------------------------------------------
-// 真实法线版 cube primitive
-//--------------------------------------------------------
+// Compute per-vertex tangents from triangle data
+void Mesh::RecalculateTangents()
+{
+	for (auto& v : m_Vertices)
+		v.Tangent = glm::vec3(0.0f);
+
+	for (size_t i = 0; i < m_Indices.size(); i += 3)
+	{
+		Vertex& v0 = m_Vertices[m_Indices[i + 0]];
+		Vertex& v1 = m_Vertices[m_Indices[i + 1]];
+		Vertex& v2 = m_Vertices[m_Indices[i + 2]];
+
+		glm::vec3 e1 = v1.Position - v0.Position;
+		glm::vec3 e2 = v2.Position - v0.Position;
+
+		glm::vec2 d1 = v1.UV - v0.UV;
+		glm::vec2 d2 = v2.UV - v0.UV;
+
+		float r = 1.0f;
+		float det = d1.x * d2.y - d1.y * d2.x;
+		if (det != 0.0f)
+			r = 1.0f / det;
+
+		glm::vec3 t = (e1 * d2.y - e2 * d1.y) * r;
+
+		v0.Tangent += t;
+		v1.Tangent += t;
+		v2.Tangent += t;
+	}
+
+	for (auto& v : m_Vertices)
+		v.Tangent = glm::normalize(v.Tangent);
+}
+
+// Upload vertex attributes and index buffer
+void Mesh::UploadToGPU()
+{
+	glGenVertexArrays(1, &m_VAO);
+	glGenBuffers(1, &m_VBO);
+	glGenBuffers(1, &m_EBO);
+
+	glBindVertexArray(m_VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBufferData(GL_ARRAY_BUFFER, m_Vertices.size() * sizeof(Vertex),
+		m_Vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_Indices.size() * sizeof(unsigned int),
+		m_Indices.data(), GL_STATIC_DRAW);
+
+	// Position
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(void*)offsetof(Vertex, Position));
+
+	// Normal
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(void*)offsetof(Vertex, Normal));
+
+	// UV
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(void*)offsetof(Vertex, UV));
+
+	// Tangent
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(void*)offsetof(Vertex, Tangent));
+
+	glBindVertexArray(0);
+}
+
+// Create cube with normal mapping support
 Mesh* Mesh::CreateCube()
 {
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> uvs;
-	std::vector<unsigned int> indices;
+	std::vector<Vertex> v;
+	std::vector<unsigned int> idx;
 
-	auto PushFace = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, glm::vec3 normal)
+	auto PushFace = [&](glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
+		glm::vec3 normal)
 		{
-			unsigned int start = positions.size();
+			unsigned int start = v.size();
 
-			positions.push_back(a); normals.push_back(normal); uvs.push_back({ 0,0 });
-			positions.push_back(b); normals.push_back(normal); uvs.push_back({ 1,0 });
-			positions.push_back(c); normals.push_back(normal); uvs.push_back({ 1,1 });
-			positions.push_back(d); normals.push_back(normal); uvs.push_back({ 0,1 });
+			v.push_back({ a, normal, {0,0}, glm::vec3(0) });
+			v.push_back({ b, normal, {1,0}, glm::vec3(0) });
+			v.push_back({ c, normal, {1,1}, glm::vec3(0) });
+			v.push_back({ d, normal, {0,1}, glm::vec3(0) });
 
-			indices.push_back(start + 0);
-			indices.push_back(start + 1);
-			indices.push_back(start + 2);
-			indices.push_back(start + 2);
-			indices.push_back(start + 3);
-			indices.push_back(start + 0);
+			idx.push_back(start + 0);
+			idx.push_back(start + 1);
+			idx.push_back(start + 2);
+			idx.push_back(start + 2);
+			idx.push_back(start + 3);
+			idx.push_back(start + 0);
 		};
 
-	// 6 faces with real normals
 	PushFace({ -0.5,-0.5,-0.5 }, { 0.5,-0.5,-0.5 }, { 0.5,0.5,-0.5 }, { -0.5,0.5,-0.5 }, { 0,0,-1 });
-	PushFace({ -0.5,-0.5,0.5 }, { 0.5,-0.5,0.5 }, { 0.5,0.5,0.5 }, { -0.5,0.5,0.5 }, { 0,0,1 });
-	PushFace({ -0.5,-0.5,-0.5 }, { -0.5,-0.5,0.5 }, { -0.5,0.5,0.5 }, { -0.5,0.5,-0.5 }, { -1,0,0 });
-	PushFace({ 0.5,-0.5,-0.5 }, { 0.5,-0.5,0.5 }, { 0.5,0.5,0.5 }, { 0.5,0.5,-0.5 }, { 1,0,0 });
-	PushFace({ -0.5,0.5,-0.5 }, { 0.5,0.5,-0.5 }, { 0.5,0.5,0.5 }, { -0.5,0.5,0.5 }, { 0,1,0 });
-	PushFace({ -0.5,-0.5,-0.5 }, { 0.5,-0.5,-0.5 }, { 0.5,-0.5,0.5 }, { -0.5,-0.5,0.5 }, { 0,-1,0 });
+	PushFace({ -0.5,-0.5, 0.5 }, { 0.5,-0.5, 0.5 }, { 0.5,0.5, 0.5 }, { -0.5,0.5, 0.5 }, { 0,0, 1 });
+	PushFace({ -0.5,-0.5,-0.5 }, { -0.5,-0.5, 0.5 }, { -0.5,0.5, 0.5 }, { -0.5,0.5,-0.5 }, { -1,0,0 });
+	PushFace({ 0.5,-0.5,-0.5 }, { 0.5,-0.5, 0.5 }, { 0.5,0.5, 0.5 }, { 0.5,0.5,-0.5 }, { 1,0,0 });
+	PushFace({ -0.5,0.5,-0.5 }, { 0.5,0.5,-0.5 }, { 0.5,0.5, 0.5 }, { -0.5,0.5, 0.5 }, { 0,1,0 });
+	PushFace({ -0.5,-0.5,-0.5 }, { 0.5,-0.5,-0.5 }, { 0.5,-0.5, 0.5 }, { -0.5,-0.5, 0.5 }, { 0,-1,0 });
 
-	return new Mesh(positions, normals, uvs, indices);
+	return new Mesh(v, idx);
 }
