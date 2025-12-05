@@ -5,7 +5,8 @@
 #include "Scene/Scene.h"
 #include "UI/UIManager.h"
 #include "Graphics/Renderer.h"
-#include "Controller/CameraController.h"   // NEW
+#include "Graphics/Framebuffer.h"       // ★ NEW for Task10
+#include "Controller/CameraController.h"
 
 class Application
 {
@@ -13,20 +14,23 @@ public:
 	Application();
 	~Application();
 
-	void Run();    // 主循环入口
+	void Run();
 
 private:
-	void Init();   // 初始化全系统依赖
+	void Init();
 	void Shutdown();
 
 private:
 	Window           m_Window;
 	Timer            m_Timer;
 	Scene            m_Scene;
+
 	UIManager        m_UI;
 	Renderer         m_Renderer;
 
-	CameraController m_CamController;   // NEW
+	Framebuffer* m_Framebuffer = nullptr;   // ★ NEW: Off-screen render target
+
+	CameraController m_CamController;
 
 	bool             m_Running = true;
 };

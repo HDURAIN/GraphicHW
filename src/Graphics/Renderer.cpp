@@ -1,20 +1,22 @@
 #include "Renderer.h"
+#include "Graphics/Framebuffer.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Utils/Log.h"
 
 Renderer::Renderer()
 {
-	// Use PBR shader as the default shader
-	m_DefaultShader = new Shader("assets/shaders/pbr.vert", "assets/shaders/pbr.frag");
+	Log::Info("Rendering to framebuffer...");
+	// Load PBR shader
+	m_DefaultShader = new Shader("assets/shaders/pbr.vert",
+		"assets/shaders/pbr.frag");
 
 	glEnable(GL_DEPTH_TEST);
 
 	m_DefaultShader->Bind();
-	// Note: all texture samplers (u_AlbedoMap, u_NormalMap, etc.)
-	// are now configured per-frame in Material::Apply().
 	m_DefaultShader->Unbind();
 
+	// Legacy viewport defaults
 	m_ViewportWidth = 1280;
 	m_ViewportHeight = 720;
 }
@@ -25,7 +27,15 @@ Renderer::~Renderer()
 }
 
 // ------------------------------------------------------------
-// Viewport update
+// Assign framebuffer (Task10)
+// ------------------------------------------------------------
+void Renderer::SetFramebuffer(Framebuffer* framebuffer)
+{
+	m_Framebuffer = framebuffer;
+}
+
+// ------------------------------------------------------------
+// Legacy viewport setter (no longer used by FBO rendering)
 // ------------------------------------------------------------
 void Renderer::SetViewportSize(int width, int height)
 {
@@ -37,7 +47,7 @@ void Renderer::SetViewportSize(int width, int height)
 }
 
 // ------------------------------------------------------------
-// Camera setup (now using dynamic aspect ratio + view position)
+// Camera setup (aspect = framebuffer size)
 // ------------------------------------------------------------
 void Renderer::SetupCamera(const Camera& camera, Shader& shader, float aspectRatio)
 {
@@ -47,12 +57,11 @@ void Renderer::SetupCamera(const Camera& camera, Shader& shader, float aspectRat
 	shader.SetMat4("u_View", view);
 	shader.SetMat4("u_Projection", projection);
 
-	// PBR shader requires the camera/world-space view position
 	shader.SetVec3("u_ViewPos", camera.GetPosition());
 }
 
 // ------------------------------------------------------------
-// Light uniform setup (NO direction upload!)
+// Upload lights to shader
 // ------------------------------------------------------------
 void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 {
@@ -84,11 +93,11 @@ void Renderer::SetupLights(const std::vector<Light>& lights, Shader& shader)
 }
 
 // ------------------------------------------------------------
-// Draw entity
+// Draw a single entity
 // ------------------------------------------------------------
 void Renderer::DrawEntity(const Entity& entity, Shader& shader)
 {
-	// Material handles binding of all textures & PBR uniforms
+	// Material uploads PBR texture maps + shader uniforms
 	entity.GetMaterial()->Apply(shader);
 
 	glm::mat4 model = entity.GetTransform().GetMatrix();
@@ -99,11 +108,23 @@ void Renderer::DrawEntity(const Entity& entity, Shader& shader)
 }
 
 // ------------------------------------------------------------
-// Render scene (viewport-aware)
+// Render scene into framebuffer (NOT screen)
 // ------------------------------------------------------------
 void Renderer::Render(const Scene& scene)
 {
-	glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
+	if (!m_Framebuffer)
+	{
+		Log::Error("Renderer::Render() called with no framebuffer assigned!");
+		return;
+	}
+
+	// Bind FBO
+	m_Framebuffer->Bind();
+
+	int fbWidth = m_Framebuffer->GetWidth();
+	int fbHeight = m_Framebuffer->GetHeight();
+
+	glViewport(0, 0, fbWidth, fbHeight);
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -111,12 +132,16 @@ void Renderer::Render(const Scene& scene)
 	Shader& shader = *m_DefaultShader;
 	shader.Bind();
 
-	float aspect = (float)m_ViewportWidth / (float)m_ViewportHeight;
-	SetupCamera(scene.GetCamera(), shader, aspect);
+	float aspectRatio = (float)fbWidth / (float)fbHeight;
+
+	SetupCamera(scene.GetCamera(), shader, aspectRatio);
 	SetupLights(scene.GetLights(), shader);
 
 	for (const auto& entity : scene.GetEntities())
 		DrawEntity(entity, shader);
 
 	shader.Unbind();
+
+	// Unbind FBO ¡ú back to screen (so ImGui can draw)
+	m_Framebuffer->Unbind();
 }

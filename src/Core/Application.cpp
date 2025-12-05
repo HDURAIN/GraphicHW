@@ -3,10 +3,11 @@
 #include "Graphics/Mesh.h"
 #include "Graphics/Material.h"
 #include "Graphics/Light.h"
+#include "Graphics/Framebuffer.h"
 #include <GLFW/glfw3.h>
 
 //---------------------------------------------------------
-// Constructor ¡ª camera controller now initialized here
+// Constructor ¡ª camera controller initialized here
 //---------------------------------------------------------
 Application::Application()
 	: m_Window(1280, 720, "GraphicHW")
@@ -28,7 +29,15 @@ void Application::Init()
 {
 	Log::Info("Initializing Application...");
 
-	// 1) Lights
+	// =====================================================
+	// 1) Create off-screen framebuffer (Task 10)
+	// =====================================================
+	m_Framebuffer = new Framebuffer(1280, 720);
+	m_Renderer.SetFramebuffer(m_Framebuffer);
+
+	// =====================================================
+	// 2) Lighting
+	// =====================================================
 	Light dirLight(LightType::Directional);
 	dirLight.SetColor({ 1.0f, 1.0f, 1.0f });
 	dirLight.SetIntensity(1.0f);
@@ -40,12 +49,16 @@ void Application::Init()
 	pointLight.SetIntensity(2.0f);
 	m_Scene.AddLight(pointLight);
 
-	// 2) Mesh + material
+	// =====================================================
+	// 3) Mesh + Material
+	// =====================================================
 	Mesh* cubeMesh = Mesh::CreateCube();
 	Material* cubeMat = new Material();
 	cubeMat->SetDiffuseColor({ 0.6f, 0.6f, 0.8f });
 
-	// 3) Sample entities ¡ª positioned in camera view
+	// =====================================================
+	// 4) Create sample entities
+	// =====================================================
 	const float spacing = 2.0f;
 	for (int i = 0; i < 3; i++)
 	{
@@ -60,6 +73,9 @@ void Application::Init()
 void Application::Shutdown()
 {
 	Log::Info("Shutting down Application...");
+
+	delete m_Framebuffer;
+	m_Framebuffer = nullptr;
 }
 
 //---------------------------------------------------------
@@ -73,39 +89,32 @@ void Application::Run()
 		m_Timer.Update();
 		float dt = m_Timer.GetDeltaTime();
 
-		// 2) Poll input and system events
+		// 2) Poll input
 		m_Window.PollEvents();
 
-		// ESC to exit application
+		// ESC exits application
 		if (Input::IsKeyPressed(GLFW_KEY_ESCAPE))
 		{
 			m_Running = false;
 			continue;
 		}
 
-		// 3) UI begin frame
+		// 3) Begin UI frame
 		m_UI.BeginFrame();
 
-		// 4) Modify scene via UI
-		m_UI.Render(m_Scene);
+		// 4) UI modifies scene
+		m_UI.Render(m_Scene, m_Renderer);
 
-		// 5) FPS Camera update
+		// 5) FPS camera update
 		m_CamController.Update(dt);
 
-		// ============================
-		// NEW: Dynamic viewport update
-		// ============================
-		int winWidth = m_Window.GetWidth();
-		int winHeight = m_Window.GetHeight();
-		m_Renderer.SetViewportSize(winWidth, winHeight);
-
-		// 6) World rendering
+		// 6) Render world into Framebuffer (NOT to screen)
 		m_Renderer.Render(m_Scene);
 
-		// 7) UI end frame
+		// 7) End UI frame (ImGui draws to screen)
 		m_UI.EndFrame();
 
-		// 8) Swap buffers
+		// 8) Present
 		m_Window.SwapBuffers();
 	}
 }

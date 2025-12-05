@@ -11,6 +11,7 @@ set(OLD_GLOB
   "E:/VSProjects/GraphicHW/src/Core/Timer.cpp"
   "E:/VSProjects/GraphicHW/src/Core/Window.cpp"
   "E:/VSProjects/GraphicHW/src/Graphics/Camera.cpp"
+  "E:/VSProjects/GraphicHW/src/Graphics/Framebuffer.cpp"
   "E:/VSProjects/GraphicHW/src/Graphics/Light.cpp"
   "E:/VSProjects/GraphicHW/src/Graphics/Material.cpp"
   "E:/VSProjects/GraphicHW/src/Graphics/Mesh.cpp"

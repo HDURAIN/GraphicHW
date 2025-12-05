@@ -4,16 +4,40 @@
 #include "Scene/Scene.h"
 #include "InspectorPanel.h"
 
+class Renderer;      // Forward declare
+class Framebuffer;   // Forward declare
+
 class UIManager
 {
 public:
 	UIManager(Window* window);
 	~UIManager();
 
-	void BeginFrame();                // ImGui::NewFrame + backend new frame
-	void Render(Scene& scene);        // 调用面板绘制，并执行 ImGui::Render()
-	void EndFrame();                  // 渲染 ImGui 数据 + swap buffer 若需要
+	// NewFrame
+	void BeginFrame();
+
+	// Draw all UI panels (Inspector + Viewport)
+	void Render(Scene& scene, Renderer& renderer);
+
+	// Render draw data
+	void EndFrame();
+
+private:
+	// DockSpace window host
+	void BeginDockspace();
+
+	// NEW in Task 10:
+	// Draws the real-time render viewport using the framebuffer's color texture
+	void DrawViewport(Renderer& renderer);
 
 private:
 	InspectorPanel m_InspectorPanel;
+	Window* m_Window = nullptr;
+
+	// Dockspace always visible for our engine
+	bool m_ShowDockspace = true;
+
+	// NEW in Task 10: track last viewport size (used to resize framebuffer)
+	int m_ViewportWidth = 0;
+	int m_ViewportHeight = 0;
 };
