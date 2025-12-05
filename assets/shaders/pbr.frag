@@ -147,7 +147,7 @@ void main()
     vec3 N = GetNormal();
 
     // =============================================================
-    // ALBEDO (Task 7 fallback)
+    // ALBEDO
     // =============================================================
     vec3 albedo;
     if (u_AlbedoMapEnabled == 1)
@@ -156,7 +156,7 @@ void main()
         albedo = u_Material_DefaultAlbedo;
 
     // =============================================================
-    // ROUGHNESS (Task 7 fallback)
+    // ROUGHNESS
     // =============================================================
     float roughness;
     if (u_RoughnessMapEnabled == 1)
@@ -165,7 +165,7 @@ void main()
         roughness = u_DefaultRoughness;
 
     // =============================================================
-    // METALNESS (Task 7 fallback)
+    // METALNESS
     // =============================================================
     float metalness;
     if (u_MetalnessMapEnabled == 1)
@@ -185,7 +185,7 @@ void main()
     // =============================================================
     if (u_HasDirectionalLight == 1)
     {
-        vec3 L = normalize(vec3(0.0, -1.0, -1.0));
+        vec3 L = normalize(vec3(1.0, 1.0, 0.5));
         vec3 H = normalize(V + L);
 
         float NdotL = max(dot(N, L), 0.0);
@@ -241,5 +241,7 @@ void main()
             * radiance * NdotL;
     }
 
-    FragColor = vec4(Lo, 1.0);
+    vec3 ambient = 0.26 * albedo;
+    vec3 color = ambient + Lo;
+    FragColor = vec4(color, 1.0);
 }

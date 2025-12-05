@@ -19,6 +19,7 @@ public:
 private:
 	void Init();
 	void Shutdown();
+	void UpdateEntityAnimations(float dt);
 
 private:
 	Window           m_Window;

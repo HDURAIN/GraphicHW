@@ -19,16 +19,14 @@ UIManager::UIManager(Window* window)
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	// 即使开启 Docking，我们这里也不再使用 DockSpace / DockBuilder
-	// 只是让窗口本身可以被停靠（如有需要）
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   // 启用 docking
 
 	// Load readable font
 	io.Fonts->AddFontFromFileTTF("assets/fonts/Roboto-Medium.ttf", 20.0f);
 	if (io.Fonts->Fonts.empty())
 		io.Fonts->AddFontDefault();
 
-	ImGui::StyleColorsDark();
+	ImGui::StyleColorsLight();
 
 	ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window->GetNativeHandle(), true);
 	ImGui_ImplOpenGL3_Init("#version 330");
@@ -47,13 +45,18 @@ UIManager::~UIManager()
 }
 
 // ------------------------------------------------------------
-// BeginDockspace
-// 现在保留空实现，仅为兼容 UIManager.h 的声明
-// 不再创建 DockSpace，也不再使用 DockBuilder 系列 API
+// DockSpace host（使用 DockSpaceOverViewport，无 DockBuilder）
 // ------------------------------------------------------------
 void UIManager::BeginDockspace()
 {
-	// 不做任何事，布局改由一个主窗口 + 子区域完成
+	ImGuiIO& io = ImGui::GetIO();
+	if (!(io.ConfigFlags & ImGuiConfigFlags_DockingEnable))
+		return;
+
+	ImGuiViewport* vp = ImGui::GetMainViewport();
+
+	// 旧版 DockSpaceOverViewport API：参数 1 = ID, 参数 2 = Viewport*
+	ImGui::DockSpaceOverViewport(0, vp);
 }
 
 // ------------------------------------------------------------
@@ -65,21 +68,19 @@ void UIManager::BeginFrame()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	// 不再创建 DockSpace
+	// 全屏 DockSpace
 	BeginDockspace();
 }
 
 // ------------------------------------------------------------
-// Draw the real-time Scene Viewport (right side)
+// Draw the real-time Scene Viewport
 // ------------------------------------------------------------
 void UIManager::DrawViewport(Renderer& renderer)
 {
-	// 这里假设我们已经在一个“右侧子区域”中
-	// 所以只负责根据当前可用区域大小去调整 Framebuffer 并画 Image
+	// 注意：位置和大小由外部 ImGui::Begin("Viewport") 窗口控制
+	// 这里只负责根据可用区域大小调整 FBO，并绘制图像。
 
 	ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-	Log::Info("Viewport size: " + std::to_string((int)viewportSize.x)
-		+ "x" + std::to_string((int)viewportSize.y));
 
 	int newW = (int)viewportSize.x;
 	int newH = (int)viewportSize.y;
@@ -104,7 +105,7 @@ void UIManager::DrawViewport(Renderer& renderer)
 		ImGui::Image(
 			texID,
 			viewportSize,
-			ImVec2(0, 1), ImVec2(1, 0) // Flip vertically
+			ImVec2(0, 1), ImVec2(1, 0) // 垂直翻转
 		);
 	}
 	else
@@ -115,55 +116,44 @@ void UIManager::DrawViewport(Renderer& renderer)
 
 // ------------------------------------------------------------
 // Render UI Panels (Inspector + Viewport)
-// 使用一个“全屏主窗口” + 左右两个子区域来布局
+// 使用两个普通可 Dock 的窗口（无 DockBuilder）
 // ------------------------------------------------------------
 void UIManager::Render(Scene& scene, Renderer& renderer)
 {
 	ImGuiIO& io = ImGui::GetIO();
+	ImVec2 displaySize = io.DisplaySize;
 
-	// 创建一个覆盖整个应用窗口的主窗口
-	ImGuiWindowFlags mainFlags =
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoBringToFrontOnFocus |
-		ImGuiWindowFlags_NoNavFocus;
-
-	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(io.DisplaySize, ImGuiCond_Always);
-
-	ImGui::Begin("MainUI", nullptr, mainFlags);
-
-	// 左侧 Inspector 区域宽度（固定像素，或按比例）
-	float leftWidth = io.DisplaySize.x * 0.30f;
+	// ============================
+	// Inspector 窗口（左侧首开布局）
+	// ============================
+	float leftWidth = displaySize.x * 0.30f;
 	if (leftWidth < 250.0f)
 		leftWidth = 250.0f;
 
-	// ---------------- 左侧：Inspector ----------------
-	ImGui::BeginChild("InspectorRegion",
-		ImVec2(leftWidth, 0.0f),     // 高度 0 表示自动填满主窗口高度
-		true,                        // 边框
-		ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::SetNextWindowSize(ImVec2(leftWidth, displaySize.y), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
 
+	ImGui::Begin("Inspector");
 	m_InspectorPanel.Draw(scene);
-	ImGui::EndChild();
+	ImGui::End();
 
-	// ---------------- 右侧：Viewport ----------------
-	ImGui::SameLine();
+	// ============================
+	// Viewport 窗口（右侧首开布局）
+	// ============================
+	ImGui::SetNextWindowSize(
+		ImVec2(displaySize.x - leftWidth, displaySize.y),
+		ImGuiCond_FirstUseEver
+	);
+	ImGui::SetNextWindowPos(
+		ImVec2(leftWidth, 0.0f),
+		ImGuiCond_FirstUseEver
+	);
 
-	ImGui::BeginChild("ViewportRegion",
-		ImVec2(0.0f, 0.0f),          // 剩余所有宽度和高度
-		true,
-		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
+	ImGui::Begin("Viewport");
 	DrawViewport(renderer);
+	ImGui::End();
 
-	ImGui::EndChild();
-
-	ImGui::End(); // MainUI
-
-	// 生成渲染数据
+	// 生成 ImGui 绘制数据
 	ImGui::Render();
 }
 

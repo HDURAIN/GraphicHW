@@ -40,13 +40,14 @@ void Application::Init()
 	// =====================================================
 	Light dirLight(LightType::Directional);
 	dirLight.SetColor({ 1.0f, 1.0f, 1.0f });
-	dirLight.SetIntensity(1.0f);
+	dirLight.SetIntensity(3.0f);
 	m_Scene.AddLight(dirLight);
 
 	Light pointLight(LightType::Point);
 	pointLight.SetPosition({ 2.0f, 2.0f, 2.0f });
 	pointLight.SetColor({ 1.0f, 0.95f, 0.95f });
-	pointLight.SetIntensity(2.0f);
+	pointLight.SetIntensity(5.0f);
+	pointLight.SetPosition({ 0.0f, 2.5f, 2.0f });
 	m_Scene.AddLight(pointLight);
 
 	// =====================================================
@@ -76,6 +77,20 @@ void Application::Shutdown()
 
 	delete m_Framebuffer;
 	m_Framebuffer = nullptr;
+}
+
+void Application::UpdateEntityAnimations(float dt)
+{
+	for (auto& e : m_Scene.GetEntities())
+	{
+		glm::vec3 rot = e.GetTransform().GetRotation();
+
+		rot.x += 20.0f * dt;
+		rot.y += 30.0f * dt;
+		rot.z += 15.0f * dt;
+
+		e.GetTransform().SetRotation(rot);
+	}
 }
 
 //---------------------------------------------------------
@@ -108,13 +123,16 @@ void Application::Run()
 		// 5) FPS camera update
 		m_CamController.Update(dt);
 
-		// 6) Render world into Framebuffer (NOT to screen)
+		// 6) Auto-rotation animation
+		UpdateEntityAnimations(dt);
+
+		// 7) Render world into Framebuffer (NOT to screen)
 		m_Renderer.Render(m_Scene);
 
-		// 7) End UI frame (ImGui draws to screen)
+		// 8) End UI frame (ImGui draws to screen)
 		m_UI.EndFrame();
 
-		// 8) Present
+		// 9) Present
 		m_Window.SwapBuffers();
 	}
 }
