@@ -26,7 +26,6 @@ private:
 	// DockSpace window host
 	void BeginDockspace();
 
-	// NEW in Task 10:
 	// Draws the real-time render viewport using the framebuffer's color texture
 	void DrawViewport(Renderer& renderer);
 
@@ -37,7 +36,7 @@ private:
 	// Dockspace always visible for our engine
 	bool m_ShowDockspace = true;
 
-	// NEW in Task 10: track last viewport size (used to resize framebuffer)
+	// Track last viewport size (used to resize framebuffer)
 	int m_ViewportWidth = 0;
 	int m_ViewportHeight = 0;
 };

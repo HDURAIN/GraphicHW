@@ -69,7 +69,6 @@ static bool DirectoryExists(const std::string& path)
 }
 
 // ------------------------------------------------------------
-// ListFiles ¡ª Task 8 final version
 // Robust, cross-platform, correct working directory handling
 // ------------------------------------------------------------
 std::vector<std::string> FileSystem::ListFiles(const std::string& rawDirectory)

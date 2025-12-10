@@ -30,7 +30,7 @@ void Application::Init()
 	Log::Info("Initializing Application...");
 
 	// =====================================================
-	// 1) Create off-screen framebuffer (Task 10)
+	// 1) Create off-screen framebuffer
 	// =====================================================
 	m_Framebuffer = new Framebuffer(1280, 720);
 	m_Renderer.SetFramebuffer(m_Framebuffer);
@@ -124,7 +124,7 @@ void Application::Run()
 		m_CamController.Update(dt);
 
 		// 6) Auto-rotation animation
-		UpdateEntityAnimations(dt);
+		 UpdateEntityAnimations(dt);
 
 		// 7) Render world into Framebuffer (NOT to screen)
 		m_Renderer.Render(m_Scene);

@@ -90,7 +90,7 @@ Material* Material::Clone() const
 }
 
 // ============================================================
-// Apply material parameters and bind textures (TASK 8 Final)
+// Apply material parameters and bind textures
 // ============================================================
 void Material::Apply(Shader& shader) const
 {

@@ -9,10 +9,10 @@
 class Framebuffer
 {
 public:
-	// ¢Ù Default constructor (no allocation)
+	// Default constructor (no allocation)
 	Framebuffer();
 
-	// ¢Ú NEW (Task10): Construct and immediately allocate GPU storage
+	// Construct and immediately allocate GPU storage
 	Framebuffer(int width, int height);
 
 	~Framebuffer();

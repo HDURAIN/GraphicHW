@@ -13,14 +13,13 @@ public:
 	~Renderer();
 
 	// ------------------------------------------------------------
-	// Assign an off-screen framebuffer (Task10)
+	// Assign an off-screen framebuffer
 	// Called once by Application::Init()
 	// ------------------------------------------------------------
 	void SetFramebuffer(Framebuffer* framebuffer);
 	Framebuffer* GetFramebuffer() const { return m_Framebuffer; }
 
 	// ------------------------------------------------------------
-	// Deprecated since Task10 (viewport now equals framebuffer size)
 	// Still kept for UI code that may call it.
 	// ------------------------------------------------------------
 	void SetViewportSize(int width, int height);
@@ -42,7 +41,7 @@ private:
 	// NEW in Task10 ¡ª all rendering happens into this FBO
 	Framebuffer* m_Framebuffer = nullptr;
 
-	// Legacy screen-dependent viewport settings (unused after Task10)
+	// Legacy screen-dependent viewport settings
 	int m_ViewportWidth = 1280;
 	int m_ViewportHeight = 720;
 };
